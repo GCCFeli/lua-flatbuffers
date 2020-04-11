@@ -1,5 +1,4 @@
-local N = require("flatbuffers.numTypes")
-local compat = require("flatbuffers.compat")
+local N = flatbuffersnative.N
 
 local m = {}
 
@@ -24,10 +23,8 @@ local Int64     = N.Int64
 local MAX_BUFFER_SIZE = 0x80000000 -- 2 GB
 local VtableMetadataFields = 2
 
-local getAlignSize = compat.GetAlignSize
-
 local function vtableEqual(a, objectStart, b)
-    UOffsetT:EnforceNumber(objectStart)
+    --UOffsetT:EnforceNumber(objectStart)
     if (#a * VOffsetT.bytewidth) ~= #b then
         return false
     end
@@ -136,13 +133,15 @@ function mt:WriteVtable()
         self:PrependVOffsetT(vBytes)
 
         local objectStart = #self.bytes - objectOffset
-        self.bytes:Set(SOffsetT:Pack(self:Offset() - objectOffset),objectStart)
+        --self.bytes:Set(SOffsetT:Pack(self:Offset() - objectOffset),objectStart)
+        self.bytes:Set(string.pack(SOffsetT.packFmt, self:Offset() - objectOffset), objectStart)
 
         table.insert(self.vtables, self:Offset())
     else
         local objectStart = #self.bytes - objectOffset
         self.head = objectStart
-        self.bytes:Set(SOffsetT:Pack(exisitingVTable - objectOffset),self.head)
+        --self.bytes:Set(SOffsetT:Pack(exisitingVTable - objectOffset),self.head)
+        self.bytes:Set(string.pack(SOffsetT.packFmt, exisitingVTable - objectOffset), self.head)
     end
 
     self.currentVTable = nil
@@ -276,7 +275,7 @@ function mt:Slot(slotnum)
 end
 
 local function finish(self, rootTable, sizePrefix)
-    UOffsetT:EnforceNumber(rootTable)
+    --UOffsetT:EnforceNumber(rootTable)
     local prepSize = UOffsetT.bytewidth
     if sizePrefix then
         prepSize = prepSize + Int32.bytewidth
@@ -286,7 +285,7 @@ local function finish(self, rootTable, sizePrefix)
     self:PrependUOffsetTRelative(rootTable)
     if sizePrefix then
         local size = #self.bytes - self.head
-        Int32:EnforceNumber(size)
+        --Int32:EnforceNumber(size)
         self:PrependInt32(size)
     end
     self.finished = true
@@ -307,8 +306,8 @@ function mt:Prepend(flags, off)
 end
 
 function mt:PrependSlot(flags, o, x, d)
-    flags:EnforceNumber(x)
-    flags:EnforceNumber(d)
+    --flags:EnforceNumber(x)
+    --flags:EnforceNumber(d)
     if x ~= d then
         self:Prepend(flags, x)
         self:Slot(o)
@@ -336,9 +335,9 @@ function mt:PrependUOffsetTRelativeSlot(o,x,d)
 end
 
 function mt:PrependStructSlot(v,x,d)
-    UOffsetT:EnforceNumber(d)
+    --UOffsetT:EnforceNumber(d)
     if x~=d then
-        UOffsetT:EnforceNumber(x)
+        --UOffsetT:EnforceNumber(x)
         assert(x == self:Offset(), "Tried to write a Struct at an Offset that is different from the current Offset of the Builder.")
         self:Slot(v)
     end
@@ -359,7 +358,8 @@ function mt:PrependInt64(x)     self:Prepend(Int64, x) end
 function mt:PrependVOffsetT(x)  self:Prepend(VOffsetT, x) end
 
 function mt:Place(x, flags)
-    local d = flags:EnforceNumberAndPack(x)
+    --local d = flags:EnforceNumberAndPack(x)
+    local d = string.pack(flags.packFmt, x)
     local h = self.head - flags.bytewidth
     self.head = h
     self.bytes:Set(d, h)

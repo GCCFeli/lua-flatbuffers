@@ -92,5 +92,5 @@ if (enable_lua_flatbuffers)
     target_compile_definitions(liblua PUBLIC ENABLE_LUA_FLATBUFFERS=1)
 endif ()
 
-add_custom_command(TARGET lua POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/../../test/ $<TARGET_FILE_DIR:lua>/test/)
+add_custom_command(TARGET lua POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink ${PROJECT_SOURCE_DIR}/../../test/ $<TARGET_FILE_DIR:lua>/test/)
 
