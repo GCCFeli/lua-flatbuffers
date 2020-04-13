@@ -29,22 +29,13 @@ local flatbuffers = require("flatbuffers")
 local ScenarioData = require("protocol.generated.ScriptComponents_serializer").ScenarioData
 
 local builder = flatbuffers.Builder(1024)
-print("---1")
 local offset = ScenarioData.Pack(builder, data)
-print("---2")
 builder:Finish(offset)
-print("---3")
 local output = builder:Output()
-print("---4")
 
 local ba = flatbuffersnative.new_binaryarray(output)
-print("---5")
-print(ba)
 local sd = ScenarioData.GetRootAsScenarioData(ba, 0)
 
-print("haah")
-print(sd.view)
-
-local n = sd:Name()
-
-print(n)
+print(sd:Name())
+print(sd:Phase())
+print(sd:EnterPosition())
