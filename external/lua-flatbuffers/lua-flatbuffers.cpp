@@ -5,7 +5,7 @@
 #include "lauxlib.h"
 
 struct SizedString {
-    uint32_t size;
+    size_t size;
     const char* string;
 };
 
@@ -38,11 +38,15 @@ public:
     BinaryArray(SizedString str) { data.resize(str.size); memcpy(data.data(), str.string, str.size); }
 
     SizedString Slice(uint32_t startPos, uint32_t endPos) {
+        if (startPos < 0) startPos = 0;
+        if (startPos > data.size()) startPos = (uint32_t)data.size();
+        if (endPos < startPos) endPos = startPos;
         if (endPos > data.size()) endPos = (uint32_t)data.size();
         return SizedString{ endPos - startPos, data.data() + startPos }; 
     }
 
     void Grow(uint32_t newSize) {
+        if (newSize < data.size()) return; // invalid args
         uint32_t oldSize = (uint32_t)data.size();
         uint32_t deltaSize = newSize - oldSize;
         data.resize(newSize);
@@ -50,10 +54,14 @@ public:
     }
 
     void Pad(uint32_t n, uint32_t startPos) {
+        if (startPos < 0 || startPos > data.size()) return; // invalid args
+        if (startPos + n > data.size()) n = (uint32_t)data.size() - startPos;
         memset(data.data() + startPos, '\0', n);
     }
 
     void Set(SizedString value, uint32_t position) {
+        if (position < 0 || position > data.size()) return; // invalid args
+        if (position + value.size > data.size()) return; // invalid args
         memcpy(data.data() + position, value.string, value.size);
     }
 
@@ -62,6 +70,7 @@ public:
     }
 
     char* Data(uint32_t position) {
+        if (position < 0 || position + 1 > data.size()) return nullptr; // invalid args
         return data.data() + position;
     }
 
@@ -275,169 +284,93 @@ static void new_num_types_table(lua_State* L) {
     lua_setfield(L, -2, "SOffsetT");
 }
 
-static int ba_slice(lua_State* L) {
-    int n = lua_gettop(L);
-    if (n == 3) {
-        if (lua_isuserdata(L, 1) && lua_isinteger(L, 2) && lua_isinteger(L, 3)) {
-            BinaryArray* ba = get_typed_userdata<BinaryArray>(L, 1, "ba_mt");
-            if (ba) {
-                uint32_t startPos = (uint32_t)lua_tointeger(L, 2);
-                uint32_t endPos = (uint32_t)lua_tointeger(L, 3);
-                SizedString ret = ba->Slice(startPos, endPos);
-                lua_pushlstring(L, ret.string, ret.size);
-                return 1;
-            }
-        }
+BinaryArray* check_binaryarray(lua_State* L, int n) {
+    return *(BinaryArray**)luaL_checkudata(L, n, "ba_mt");
+}
+
+static int ba_new(lua_State* L) {
+    if (lua_isnumber(L, 1)) {
+        uint32_t size = (uint32_t)lua_tointeger(L, 1);
+        BinaryArray** udata = (BinaryArray**)lua_newuserdata(L, sizeof(BinaryArray*));
+        *udata = new BinaryArray(size);
+        luaL_getmetatable(L, "ba_mt");
+        lua_setmetatable(L, -2);
+        return 1;
+    } else if (lua_isstring(L, 1)) {
+        SizedString str;
+        str.string = lua_tolstring(L, 1, &str.size);
+        BinaryArray** udata = (BinaryArray**)lua_newuserdata(L, sizeof(BinaryArray*));
+        *udata = new BinaryArray(str);
+        luaL_getmetatable(L, "ba_mt");
+        lua_setmetatable(L, -2);
+        return 1;
     }
     lua_pushliteral(L, "incorrect argument");
     lua_error(L);
     return 0;
 }
 
+static int ba_slice(lua_State* L) {
+    BinaryArray* ba = check_binaryarray(L, 1);
+    uint32_t startPos = (uint32_t)luaL_checkinteger(L, 2);
+    uint32_t endPos = (uint32_t)luaL_checkinteger(L, 3);
+    SizedString ret = ba->Slice(startPos, endPos);
+    lua_pushlstring(L, ret.string, ret.size);
+    return 1;
+}
+
 static int ba_grow(lua_State* L) {
-    int n = lua_gettop(L);
-    if (n == 2) {
-        if (lua_isuserdata(L, 1) && lua_isinteger(L, 2)) {
-            BinaryArray* ba = get_typed_userdata<BinaryArray>(L, 1, "ba_mt");
-            if (ba) {
-                uint32_t newSize = (uint32_t)lua_tointeger(L, 2);
-                ba->Grow(newSize);
-                return 0;
-            }
-        }
-    }
-    lua_pushliteral(L, "incorrect argument");
-    lua_error(L);
+    BinaryArray* ba = check_binaryarray(L, 1);
+    uint32_t newSize = (uint32_t)luaL_checkinteger(L, 2);
+    ba->Grow(newSize);
     return 0;
 }
 
 static int ba_pad(lua_State* L) {
-    int n = lua_gettop(L);
-    if (n == 3) {
-        if (lua_isuserdata(L, 1) && lua_isinteger(L, 2) && lua_isinteger(L, 3)) {
-            BinaryArray* ba = get_typed_userdata<BinaryArray>(L, 1, "ba_mt");
-            if (ba) {
-                uint32_t n = (uint32_t)lua_tointeger(L, 2);
-                uint32_t startPos = (uint32_t)lua_tointeger(L, 3);
-                ba->Pad(n, startPos);
-                return 0;
-            }
-        }
-    }
-    lua_pushliteral(L, "incorrect argument");
-    lua_error(L);
+    BinaryArray* ba = check_binaryarray(L, 1);
+    uint32_t n = (uint32_t)luaL_checkinteger(L, 2);
+    uint32_t startPos = (uint32_t)luaL_checkinteger(L, 3);
+    ba->Pad(n, startPos);
     return 0;
 }
 
 static int ba_set(lua_State* L) {
-    int n = lua_gettop(L);
-    if (n == 3) {
-        if (lua_isuserdata(L, 1) && lua_isstring(L, 2) && lua_isinteger(L, 3)) {
-            BinaryArray* ba = get_typed_userdata<BinaryArray>(L, 1, "ba_mt");
-            if (ba) {
-                SizedString value;
-                size_t size;
-                value.string = lua_tolstring(L, 2, &size);
-                value.size = (uint32_t)size;
-                uint32_t position = (uint32_t)lua_tointeger(L, 3);
-                ba->Set(value, position);
-                return 0;
-            }
-        }
-    }
-    lua_pushliteral(L, "incorrect argument");
-    lua_error(L);
+    BinaryArray* ba = check_binaryarray(L, 1);
+    SizedString value;
+    value.string = luaL_checklstring(L, 2, &value.size);
+    uint32_t position = (uint32_t)luaL_checkinteger(L, 3);
+    ba->Set(value, position);
     return 0;
 }
 
 static int ba_size(lua_State* L) {
-    int n = lua_gettop(L);
-    if (n >= 1) {
-        if (lua_isuserdata(L, 1)) {
-            BinaryArray* ba = get_typed_userdata<BinaryArray>(L, 1, "ba_mt");
-            if (ba) {
-                uint32_t size = ba->Size();
-                lua_pushinteger(L, size);
-                return 1;
-            }
-        }
-    }
-    lua_pushliteral(L, "incorrect argument");
-    lua_error(L);
-    return 0;
+    BinaryArray* ba = check_binaryarray(L, 1);
+    uint32_t size = ba->Size();
+    lua_pushinteger(L, size);
+    return 1;
 }
 
 static int ba_gc(lua_State* L) {
-    int n = lua_gettop(L);
-    if (n == 1) {
-        if (lua_isuserdata(L, 1)) {
-            BinaryArray* ba = get_typed_userdata<BinaryArray>(L, 1, "ba_mt");
-            if (ba) {
-                ba->~BinaryArray();
-                return 0;
-            }
-        }
-    }
-    lua_pushliteral(L, "incorrect argument");
-    lua_error(L);
+    BinaryArray* ba = check_binaryarray(L, 1);
+    delete ba;
     return 0;
 }
 
-static void set_binaryarray_mt(lua_State* L) {
-    // assume stack top is a binaryarray
-    if (luaL_newmetatable(L, "ba_mt")) {
-        lua_newtable(L); // [ba, ba_mt, mt]
+static void register_binaryarray(lua_State* L) {
+    luaL_Reg binaryarray_reg[] =
+    {
+        { "Slice", ba_slice },
+        { "Grow", ba_grow },
+        { "Pad", ba_pad },
+        { "Set", ba_set },
+        { "__len", ba_size },
+        { "__gc", ba_gc },
+        { nullptr, nullptr }
+    };
 
-        lua_pushcfunction(L, ba_slice); // [ba, ba_mt, mt, ba_slice]
-        lua_setfield(L, -2, "Slice"); // [ba, ba_mt, mt]
-
-        lua_pushcfunction(L, ba_grow); // [ba, ba_mt, mt, ba_slice]
-        lua_setfield(L, -2, "Grow"); // [ba, ba_mt, mt]
-
-        lua_pushcfunction(L, ba_pad); // [ba, ba_mt, mt, ba_slice]
-        lua_setfield(L, -2, "Pad"); // [ba, ba_mt, mt]
-
-        lua_pushcfunction(L, ba_set); // [ba, ba_mt, mt, ba_slice]
-        lua_setfield(L, -2, "Set"); // [ba, ba_mt, mt]
-
-        lua_setfield(L, -2, "__index"); // [ba, ba_mt]
-
-        lua_pushcfunction(L, ba_size); // [ba, ba_mt, ba_size]
-        lua_setfield(L, -2, "__len"); // [ba, ba_mt]
-
-        lua_pushcfunction(L, ba_gc); // [ba, ba_mt, ba_gc]
-        lua_setfield(L, -2, "__gc"); // [ba, ba_mt]
-
-        lua_pushliteral(L, "ba_mt"); // [ba, ba_mt, "ba_mt"]
-        lua_setfield(L, -2, "__metatable"); // [ba, ba_mt]
-    }
-
-    lua_setmetatable(L, -2); // [ba]
-}
-
-static int new_binaryarray(lua_State* L) {
-    int n = lua_gettop(L);
-    if (n == 1) {
-        if (lua_isnumber(L, 1)) {
-            uint32_t size = (uint32_t)lua_tointeger(L, 1);
-            void* ptr = lua_newuserdata(L, sizeof(BinaryArray));
-            ptr = new(ptr) BinaryArray(size);
-            set_binaryarray_mt(L);
-            return 1;
-        } else if (lua_isstring(L, 1)) {
-            SizedString str;
-            size_t len;
-            str.string = lua_tolstring(L, 1, &len);
-            str.size = (uint32_t)len;
-            void* ptr = lua_newuserdata(L, sizeof(BinaryArray));
-            ptr = new(ptr) BinaryArray(str);
-            set_binaryarray_mt(L);
-            return 1;
-        }
-    } 
-    lua_pushliteral(L, "incorrect argument");
-    lua_error(L);
-    return 0;
+    luaL_newmetatable(L, "ba_mt");
+    luaL_setfuncs(L, binaryarray_reg, 0);
+    lua_setfield(L, -1, "__index");
 }
 
 static int view_offset(lua_State* L) {
@@ -694,6 +627,8 @@ extern "C" {
 
 LUALIB_API int luaopen_flatbuffers(lua_State* L)
 {
+    register_binaryarray(L);
+
 	lua_newtable(L); // [flatbuffers]
 
 	lua_pushliteral(L, "flatbuffers"); // [flatbuffers, name]
@@ -702,7 +637,7 @@ LUALIB_API int luaopen_flatbuffers(lua_State* L)
 	lua_pushliteral(L, "v0.1"); // [flatbuffers, version]
 	lua_setfield(L, -2, "_VERSION"); // [flatbuffers]
 
-	lua_pushcfunction(L, new_binaryarray); // [flatbuffers, new_binaryarray]
+	lua_pushcfunction(L, ba_new); // [flatbuffers, new_binaryarray]
 	lua_setfield(L, -2, "new_binaryarray"); // [flatbuffers]
 
 	new_num_types_table(L); // [flatbuffers, num_types]
