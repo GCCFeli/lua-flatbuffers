@@ -38,4 +38,5 @@ local sd = ScenarioData.GetRootAsScenarioData(ba, 0)
 
 print(sd:Name())
 print(sd:Phase())
-print(sd:EnterPosition())
+print(sd:EnterPosition():X())
+print(sd:EnterPosition():Y())
