@@ -1,4 +1,5 @@
 #include <vector>
+#include <cstring>
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
@@ -141,31 +142,31 @@ static int num_type_unpack(lua_State* L) {
     void* ptr = ba->Data(offset);
 
     NumType* num_type = nullptr;
-    if (num_type = test_num_type(L, 1, "Bool")) {
+    if ((num_type = test_num_type(L, 1, "Bool"))) {
         lua_pushinteger(L, *((uint8_t*)ptr));
         return 1;
-    } else if (num_type = test_num_type(L, 1, "Uint8")) {
+    } else if ((num_type = test_num_type(L, 1, "Uint8"))) {
         lua_pushinteger(L, *((uint8_t*)ptr));
         return 1;
-    } else if (num_type = test_num_type(L, 1, "Uint16")) {
+    } else if ((num_type = test_num_type(L, 1, "Uint16"))) {
         lua_pushinteger(L, *((uint16_t*)ptr));
         return 1;
-    } else if (num_type = test_num_type(L, 1, "Uint32")) {
+    } else if ((num_type = test_num_type(L, 1, "Uint32"))) {
         lua_pushinteger(L, *((uint32_t*)ptr));
         return 1;
-    } else if (num_type = test_num_type(L, 1, "Uint64")) {
+    } else if ((num_type = test_num_type(L, 1, "Uint64"))) {
         lua_pushinteger(L, *((uint64_t*)ptr));
         return 1;
-    } else if (num_type = test_num_type(L, 1, "Int8")) {
+    } else if ((num_type = test_num_type(L, 1, "Int8"))) {
         lua_pushinteger(L, *((int8_t*)ptr));
         return 1;
-    } else if (num_type = test_num_type(L, 1, "Int16")) {
+    } else if ((num_type = test_num_type(L, 1, "Int16"))) {
         lua_pushinteger(L, *((int16_t*)ptr));
         return 1;
-    } else if (num_type = test_num_type(L, 1, "Int32")) {
+    } else if ((num_type = test_num_type(L, 1, "Int32"))) {
         lua_pushinteger(L, *((int32_t*)ptr));
         return 1;
-    } else if (num_type = test_num_type(L, 1, "Int64")) {
+    } else if ((num_type = test_num_type(L, 1, "Int64"))) {
         lua_pushinteger(L, *((int64_t*)ptr));
         return 1;
     }
@@ -395,31 +396,31 @@ static int view_get(lua_State* L) {
     uint32_t offset = (uint32_t)luaL_checkinteger(L, 3);
 
     NumType* num_type = nullptr;
-    if (num_type = test_num_type(L, 2, "Bool")) {
+    if ((num_type = test_num_type(L, 2, "Bool"))) {
         lua_pushinteger(L, view->Get<uint8_t>(offset));
         return 1;
-    } else if (num_type = test_num_type(L, 2, "Uint8")) {
+    } else if ((num_type = test_num_type(L, 2, "Uint8"))) {
         lua_pushinteger(L, view->Get<uint8_t>(offset));
         return 1;
-    } else if (num_type = test_num_type(L, 2, "Uint16")) {
+    } else if ((num_type = test_num_type(L, 2, "Uint16"))) {
         lua_pushinteger(L, view->Get<uint16_t>(offset));
         return 1;
-    } else if (num_type = test_num_type(L, 2, "Uint32")) {
+    } else if ((num_type = test_num_type(L, 2, "Uint32"))) {
         lua_pushinteger(L, view->Get<uint32_t>(offset));
         return 1;
-    } else if (num_type = test_num_type(L, 2, "Uint64")) {
+    } else if ((num_type = test_num_type(L, 2, "Uint64"))) {
         lua_pushinteger(L, view->Get<uint64_t>(offset));
         return 1;
-    } else if (num_type = test_num_type(L, 2, "Int8")) {
+    } else if ((num_type = test_num_type(L, 2, "Int8"))) {
         lua_pushinteger(L, view->Get<int8_t>(offset));
         return 1;
-    } else if (num_type = test_num_type(L, 2, "Int16")) {
+    } else if ((num_type = test_num_type(L, 2, "Int16"))) {
         lua_pushinteger(L, view->Get<int16_t>(offset));
         return 1;
-    } else if (num_type = test_num_type(L, 2, "Int32")) {
+    } else if ((num_type = test_num_type(L, 2, "Int32"))) {
         lua_pushinteger(L, view->Get<int32_t>(offset));
         return 1;
-    } else if (num_type = test_num_type(L, 2, "Int64")) {
+    } else if ((num_type = test_num_type(L, 2, "Int64"))) {
         lua_pushinteger(L, view->Get<int64_t>(offset));
         return 1;
     }
