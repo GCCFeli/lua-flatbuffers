@@ -1,5 +1,4 @@
 #include <vector>
-#include "lua-flatbuffers.h"
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
@@ -143,7 +142,7 @@ static int num_type_unpack(lua_State* L) {
 
     NumType* num_type = nullptr;
     if (num_type = test_num_type(L, 1, "Bool")) {
-        lua_pushboolean(L, *((bool*)ptr));
+        lua_pushinteger(L, *((uint8_t*)ptr));
         return 1;
     } else if (num_type = test_num_type(L, 1, "Uint8")) {
         lua_pushinteger(L, *((uint8_t*)ptr));
@@ -397,7 +396,7 @@ static int view_get(lua_State* L) {
 
     NumType* num_type = nullptr;
     if (num_type = test_num_type(L, 2, "Bool")) {
-        lua_pushboolean(L, view->Get<bool>(offset));
+        lua_pushinteger(L, view->Get<uint8_t>(offset));
         return 1;
     } else if (num_type = test_num_type(L, 2, "Uint8")) {
         lua_pushinteger(L, view->Get<uint8_t>(offset));
